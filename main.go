@@ -5,7 +5,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"fmt"
 	"github.com/go-acme/lego/v4/certcrypto"
 	"github.com/go-acme/lego/v4/certificate"
 	"github.com/go-acme/lego/v4/lego"
@@ -42,26 +41,34 @@ func main() {
 	}
 
 	// if you have privateKey file already, use it
-	privateKeyFilePath := "/home/stark/.lego/accounts/acme-v02.api.letsencrypt.org/gooda159753@163.com/keys/gooda159753@163.com.key"
-	if _, err = os.Stat(privateKeyFilePath); err != nil {
-		if os.IsNotExist(err) {
-			log.Println(privateKeyFilePath + " does not exist")
-		}
-	} else {
-		log.Println(privateKeyFilePath + " exists")
-		privateKeyFileBytes, err := os.ReadFile(privateKeyFilePath)
-		if err != nil {
-			log.Fatal(err)
-		}
-		privateKey, err = certcrypto.ParsePEMPrivateKey(privateKeyFileBytes)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
+	//privateKeyFilePath := "/home/stark/.lego/accounts/acme-v02.api.letsencrypt.org/foo@bar.com/keys/foo@bar.com.key"
+	//if _, err = os.Stat(privateKeyFilePath); err != nil {
+	//	if os.IsNotExist(err) {
+	//		log.Println(privateKeyFilePath + " does not exist")
+	//	}
+	//} else {
+	//	log.Println(privateKeyFilePath + " exists")
+	//	privateKeyFileBytes, err := os.ReadFile(privateKeyFilePath)
+	//	if err != nil {
+	//		log.Fatal(err)
+	//	}
+	//	privateKey, err = certcrypto.ParsePEMPrivateKey(privateKeyFileBytes)
+	//	if err != nil {
+	//		log.Fatal(err)
+	//	}
+	//}
+
+	// 直接复制文件中的私钥
+	//var privateKeyFileBytes []byte
+	//privateKeyFileBytes = []byte("-----BEGIN EC PRIVATE KEY-----\nMHcCAQEEIKcX2Pkw/UoObxxxQ7ugO+dFedMyWbal20ohxjeHRg0ToAoGCCqGSM49\nAwEHoUQDQgAEB/f+AboCZIMiM+pwo1difxp0LSJzaCvD5dsBKWSexLfD5bI6bw4w\ntqcFqILzXxVr4neL3Dm28FhC86Rf3PinZQ==\n-----END EC PRIVATE KEY-----")
+	//privateKey, err = certcrypto.ParsePEMPrivateKey(privateKeyFileBytes)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
 
 	// build acme client
 	myUser := MyUser{
-		Email: "you@example.com",
+		Email: "foo@bar.com",
 		key:   privateKey,
 	}
 	config := lego.NewConfig(&myUser)
@@ -89,17 +96,23 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// old user use registration from same old privateKey
+	//reg, err := client.Registration.ResolveAccountByKey()
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
 	myUser.Registration = reg
 	request := certificate.ObtainRequest{
-		Domains:    []string{"www.example.com"},
-		Bundle:     true,
-		PrivateKey: privateKey,
+		Domains: []string{"gitlab.starksim.com"},
+		Bundle:  true,
+		// 这里是证书的 key，不是用户的 key，可以手动提供，但肯定不能提供跟用户的 key 一样
+		//PrivateKey: privateKey,
 	}
 	certificates, err := client.Certificate.Obtain(request)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("%#v\n", certificates)
 	err = os.WriteFile("PrivateKey", certificates.PrivateKey, os.ModePerm)
 	if err != nil {
 		log.Print(err)
