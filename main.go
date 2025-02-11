@@ -1,10 +1,12 @@
 package main
 
 import (
+	"auto-cert/config"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"fmt"
 	"github.com/go-acme/lego/v4/certcrypto"
 	"github.com/go-acme/lego/v4/certificate"
 	"github.com/go-acme/lego/v4/lego"
@@ -31,6 +33,9 @@ func (u *MyUser) GetPrivateKey() crypto.PrivateKey {
 }
 
 func main() {
+
+	fmt.Printf("%+v", config.Config)
+
 	// new privateKey means new user
 	// if it's the first time, generate a privateKey
 	var privateKey crypto.PrivateKey
@@ -60,7 +65,7 @@ func main() {
 
 	// 直接复制文件中的私钥
 	//var privateKeyFileBytes []byte
-	//privateKeyFileBytes = []byte("-----BEGIN EC PRIVATE KEY-----\nMHcCAQEEIKcX2Pkw/UoObxxxQ7ugO+dFedMyWbal20ohxjeHRg0ToAoGCCqGSM49\nAwEHoUQDQgAEB/f+AboCZIMiM+pwo1difxp0LSJzaCvD5dsBKWSexLfD5bI6bw4w\ntqcFqILzXxVr4neL3Dm28FhC86Rf3PinZQ==\n-----END EC PRIVATE KEY-----")
+	//privateKeyFileBytes = []byte("-----BEGIN EC PRTE KEY-----\nMHcCAQEEIKcX2Pkw/UoObxxxQ7ugO+dFedMyWbal20ohxjeHRg0ToAoGCCqGSM49\nAwEHoUQDQgAEB/f+AboCZI")
 	//privateKey, err = certcrypto.ParsePEMPrivateKey(privateKeyFileBytes)
 	//if err != nil {
 	//	log.Fatal(err)
