@@ -132,8 +132,19 @@ func main() {
 	if err != nil {
 		logrus.Fatal(err)
 	}
-	err = os.WriteFile(fmt.Sprintf("%s.csr", config.Config.Lego.Domains[0]), certificates.CSR, os.ModePerm)
-	if err != nil {
-		logrus.Fatal(err)
-	}
+	// 无内容
+	//err = os.WriteFile(fmt.Sprintf("%s.csr", config.Config.Lego.Domains[0]), certificates.CSR, os.ModePerm)
+	//if err != nil {
+	//	logrus.Fatal(err)
+	//}
 }
+
+// https://github.com/1Panel-dev/1Panel/discussions/4982
+//目前证书申请用的是第三方 lego 插件 其中的逻辑我们暂时无法更改
+//目前已知可能会导致失败的原因
+//
+//ipv6 部分有 ipv6 或者 ipv6 设置打开但是实际没有 ipv6 的机器容易失败，解决方案：禁用 ipv6
+//部分有 CNAME 解析的域名会失败 ， 解决方案：申请证书时候勾选禁用 CNAME
+// TODO 改 DNS 可以，奇了怪了，看能不能覆盖 阿里云的 dns
+//腾讯云机器使用默认的 DNS 类似 127.0.0.53 会导致失败 ，解决方案：申请证书的时候填写公共 DNS 8.8.8.8 或者 114.114.114.114
+//部分 DNS 生效时间过长导致超时，解决方案：申请证书时候勾选跳过 DNS 验证
