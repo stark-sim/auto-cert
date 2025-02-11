@@ -15,6 +15,9 @@ const DefaultConfigPath = "./config.yaml"
 type LegoConfig struct {
 	Email   string   `mapstructure:"email"`
 	Domains []string `mapstructure:"domains"`
+
+	// 自定义私钥存放路径，若留空为 lego 默认路径
+	PrivateKeyPath string `mapstructure:"private_key_path"`
 }
 
 // AliyunConfig 阿里云服务提供方的配置，一般要从环境变量中获取
@@ -33,6 +36,7 @@ type GlobalConfig struct {
 // Config 全局变量供其他地方使用
 var Config GlobalConfig
 
+// 配置优先级别：真环境变量 (export) > .env 文件 > config.yaml
 func init() {
 	// 初始化配置文件路径
 	viper.SetConfigFile(DefaultConfigPath)
@@ -81,5 +85,4 @@ func init() {
 		logrus.Errorf("unmarshal config file err: %v", err)
 		panic(err)
 	}
-
 }

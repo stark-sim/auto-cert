@@ -3,3 +3,11 @@ lego:
   domains:
     - www.starksim.com
     - gitlab.starksim.com
+
+  private_key_path:
+
+# 注意！私人信息非开发情况不要写在这里
+# Alarm! private info only for local development
+aliyun:
+  access_key: foo
+  secret_key: bar
