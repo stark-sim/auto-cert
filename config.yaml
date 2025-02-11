@@ -1,5 +1,6 @@
 lego:
   email: gooda159753@163.com
+  # 第一个域名会作为文件名
   domains:
     - www.starksim.com
     - gitlab.starksim.com

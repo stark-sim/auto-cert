@@ -13,8 +13,8 @@ import (
 	"github.com/go-acme/lego/v4/providers/dns/alidns"
 	"github.com/go-acme/lego/v4/registration"
 	"github.com/sirupsen/logrus"
-	"log"
 	"os"
+	"time"
 )
 
 type MyUser struct {
@@ -82,6 +82,8 @@ func main() {
 	cfg := alidns.NewDefaultConfig()
 	cfg.APIKey = config.Config.Aliyun.AccessKey
 	cfg.SecretKey = config.Config.Aliyun.SecretKey
+	// 可以等 10 分钟，等在阿里云改了 dns 后生效
+	cfg.PropagationTimeout = 10 * time.Minute
 	p, err := alidns.NewDNSProviderConfig(cfg)
 	if err != nil {
 		logrus.Fatal(err)
@@ -116,22 +118,22 @@ func main() {
 	}
 	certificates, err := client.Certificate.Obtain(request)
 	if err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
-	err = os.WriteFile("PrivateKey", certificates.PrivateKey, os.ModePerm)
+	err = os.WriteFile(fmt.Sprintf("%s.key", config.Config.Lego.Domains[0]), certificates.PrivateKey, os.ModePerm)
 	if err != nil {
-		log.Print(err)
+		logrus.Fatal(err)
 	}
-	err = os.WriteFile("Certificate", certificates.Certificate, os.ModePerm)
+	err = os.WriteFile(fmt.Sprintf("%s.crt", config.Config.Lego.Domains[0]), certificates.Certificate, os.ModePerm)
 	if err != nil {
-		log.Print(err)
+		logrus.Fatal(err)
 	}
-	err = os.WriteFile("IssuerCertificate", certificates.IssuerCertificate, os.ModePerm)
+	err = os.WriteFile(fmt.Sprintf("%s.issuer.crt", config.Config.Lego.Domains[0]), certificates.IssuerCertificate, os.ModePerm)
 	if err != nil {
-		log.Print(err)
+		logrus.Fatal(err)
 	}
-	err = os.WriteFile("CSR", certificates.CSR, os.ModePerm)
+	err = os.WriteFile(fmt.Sprintf("%s.csr", config.Config.Lego.Domains[0]), certificates.CSR, os.ModePerm)
 	if err != nil {
-		log.Print(err)
+		logrus.Fatal(err)
 	}
 }
