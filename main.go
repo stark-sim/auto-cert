@@ -51,8 +51,8 @@ func main() {
 	// 一个密钥在 acme Let's Encrypt 处代表着一个用户
 	var privateKeyPath string
 	if config.Config.Lego.PrivateKeyPath == "" {
-		// 使用默认路径，这个路径是使用 CLI 时会使用的路径，当然用不用这个无所谓，毕竟可以完全不用 CLI
-		privateKeyPath = fmt.Sprintf("~/.lego/accounts/acme-v02.api.letsencrypt.org/%s/keys/%s.key", config.Config.Lego.Email, config.Config.Lego.Email)
+		// 使用默认路径，这个路径是使用 CLI 时会使用的路径，当然学不学这个无所谓，毕竟可以完全不用 CLI
+		privateKeyPath = fmt.Sprintf(".lego/accounts/acme-v02.api.letsencrypt.org/%s/keys/%s.key", config.Config.Lego.Email, config.Config.Lego.Email)
 	} else {
 		privateKeyPath = config.Config.Lego.PrivateKeyPath
 	}
@@ -181,6 +181,11 @@ func main() {
 	}
 
 	// 不论是新证书还是续证书，都需要保存证书文件和 cert url 信息
+	if config.Config.Lego.CrtSaveDir != "" {
+		if err = os.MkdirAll(config.Config.Lego.CrtSaveDir, os.ModePerm); err != nil {
+			logrus.Fatal(err)
+		}
+	}
 	err = os.WriteFile(path.Join(config.Config.Lego.CrtSaveDir, fmt.Sprintf("%s.key", config.Config.Lego.Domains[0])), certificates.PrivateKey, os.ModePerm)
 	if err != nil {
 		logrus.Fatal(err)
