@@ -11,7 +11,7 @@ lego:
   private_key_path:
 
   # 保存证书文件们的文件夹路径，留空默认为当前目录
-  crt_save_dir:
+  crt_save_dir: ~/.lego/certificates/
 
 # 注意！私人信息非开发情况不要写在这里，建议使用 RAM 用户的 API_ACCESS_KEY
 # Alarm! private info only for local development

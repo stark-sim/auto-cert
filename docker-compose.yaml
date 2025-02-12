@@ -1,0 +1,14 @@
+# 希望打造成一个运行一下就会更新证书文件的容器，至于自动化交由控制“容器启动”的外部逻辑
+services:
+  app:
+    image: starksim/auto-cert
+    container_name: "auto-cert"
+    environment:
+      - ALIYUN_ACCESS_KEY=
+      - ALIYUN_SECRET_KEY=
+    # 重头戏为挂载
+    volumes:
+      # 把一个文件夹挂载到 crt_save_dir 上就可以在宿主机获取到新的证书文件
+      - certificates/:~/.lego/certificates/
+      # 把配置文件挂载对应起来，就可以在宿主机上添加要认证的域名
+      - config.yaml:~/app/config.yaml

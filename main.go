@@ -51,8 +51,8 @@ func main() {
 	// 一个密钥在 acme Let's Encrypt 处代表着一个用户
 	var privateKeyPath string
 	if config.Config.Lego.PrivateKeyPath == "" {
-		// 使用默认路径
-		privateKeyPath = fmt.Sprintf(".lego/accounts/acme-v02.api.letsencrypt.org/%s/keys/%s.key", config.Config.Lego.Email, config.Config.Lego.Email)
+		// 使用默认路径，这个路径是使用 CLI 时会使用的路径，当然用不用这个无所谓，毕竟可以完全不用 CLI
+		privateKeyPath = fmt.Sprintf("~/.lego/accounts/acme-v02.api.letsencrypt.org/%s/keys/%s.key", config.Config.Lego.Email, config.Config.Lego.Email)
 	} else {
 		privateKeyPath = config.Config.Lego.PrivateKeyPath
 	}
