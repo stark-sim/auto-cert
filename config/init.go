@@ -18,6 +18,9 @@ type LegoConfig struct {
 
 	// 自定义私钥存放路径，若留空为 lego 默认路径
 	PrivateKeyPath string `mapstructure:"private_key_path"`
+
+	// 自定义证书保存目录，若留空即当前目录
+	CrtSaveDir string `mapstructure:"crt_save_dir"`
 }
 
 // AliyunConfig 阿里云服务提供方的配置，一般要从环境变量中获取

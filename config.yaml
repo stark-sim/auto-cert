@@ -1,13 +1,19 @@
 lego:
+  # 尽量用个真邮箱
   email: gooda159753@163.com
+
   # 第一个域名会作为文件名
   domains:
     - www.starksim.com
     - gitlab.starksim.com
 
+  # 私钥在 acme 代表一个用户，留空使用默认路径，如果有自己喜欢用的私钥就自己填 /path/to/your/private_key.[pem/key]
   private_key_path:
 
-# 注意！私人信息非开发情况不要写在这里
+  # 保存证书文件们的文件夹路径，留空默认为当前目录
+  crt_save_dir:
+
+# 注意！私人信息非开发情况不要写在这里，建议使用 RAM 用户的 API_ACCESS_KEY
 # Alarm! private info only for local development
 aliyun:
   access_key: foo
