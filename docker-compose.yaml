@@ -9,6 +9,6 @@ services:
     # 重头戏为挂载
     volumes:
       # 把一个文件夹挂载到 crt_save_dir 上就可以在宿主机获取到新的证书文件
-      - ./certificates/:.lego/certificates/
+      - ./certificates/:/app/.lego/certificates/
       # 把配置文件挂载对应起来，就可以在宿主机上添加要认证的域名
       - ./config.yaml:/app/config.yaml
