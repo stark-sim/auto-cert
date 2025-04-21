@@ -6,6 +6,7 @@ lego:
   domains:
     - www.starksim.com
     - gitlab.starksim.com
+    - harbor.starksim.com
 
   # 私钥在 acme 代表一个用户，留空使用默认路径，如果有自己喜欢用的私钥就自己填 /path/to/your/private_key.[pem/key]
   private_key_path:
