@@ -8,13 +8,23 @@ on:
 
 jobs:
 
-  build:
-
+  # PR 和 push 时都运行，只做测试
+  test:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v3
-    - name: Build the Docker image
+    - name: Build and Test
+      run: |
+        docker build . --file Dockerfile --tag test:latest
+
+  # 只在 push 到 master 时运行，真正构建并推送镜像
+  build-and-push:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    needs: test
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build and Push Docker Image
       run: |
         docker login -u starksim -p ${{ secrets.DOCKER_HUB_SECRET }}
         docker buildx create --use
