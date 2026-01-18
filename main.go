@@ -2,6 +2,8 @@ package main
 
 import (
 	"auto-cert/config"
+	"auto-cert/pkg/cert"
+	"auto-cert/pkg/deployer"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -155,6 +157,17 @@ func main() {
 
 	} else {
 		// 文件存在，走重续证书逻辑 (Renew)
+		// 先检查证书是否需要续期
+		certFilePath := path.Join(config.Config.Lego.CrtSaveDir, fmt.Sprintf("%s.crt", config.Config.Lego.Domains[0]))
+		shouldRenew, err := shouldObtainOrRenew(certFilePath)
+		if err != nil {
+			logrus.Warnf("Error checking certificate renewal: %v, proceeding with renewal", err)
+		}
+		if !shouldRenew {
+			logrus.Info("Certificate is still valid, no action needed. Exiting.")
+			return
+		}
+
 		savedCertURLFileBytes, err = os.ReadFile(originCrtJsonFilePath)
 		if err != nil {
 			logrus.Fatal(err)
@@ -215,6 +228,123 @@ func main() {
 	if err = os.WriteFile(originCrtJsonFilePath, savedCertURLFileBytes, os.ModePerm); err != nil {
 		logrus.Fatal(err)
 	}
+
+	// 部署证书到配置的服务
+	if len(config.Config.Services) > 0 {
+		logrus.Info("Deploying certificates to services...")
+		if err := deployCertificates(config.Config.Lego.Domains[0], certificates.Certificate, certificates.PrivateKey); err != nil {
+			logrus.Errorf("Failed to deploy certificates: %v", err)
+		} else {
+			logrus.Info("Certificates deployed successfully")
+		}
+	}
+}
+
+// deployCertificates 部署证书到配置的服务
+func deployCertificates(domain string, certData []byte, keyData []byte) error {
+	var deployTargets []deployer.DeployTarget
+	var reloadCmds []string
+	var backupNeeded bool
+
+	// 收集所有匹配该域名的服务配置
+	for _, service := range config.Config.Services {
+		if !service.Enabled {
+			continue
+		}
+		// 域名匹配：完全匹配或域名在服务域名列表中
+		if service.Domain != "" && service.Domain != domain {
+			continue
+		}
+
+		logrus.Infof("Processing service: %s", service.Name)
+
+		// 收集部署目标
+		for _, target := range service.Targets {
+			if target.CertPath != "" && target.KeyPath != "" {
+				deployTargets = append(deployTargets, deployer.DeployTarget{
+					CertPath: target.CertPath,
+					KeyPath:  target.KeyPath,
+				})
+			}
+		}
+
+		// 收集重载命令
+		if service.ReloadCmd != "" {
+			reloadCmds = append(reloadCmds, service.ReloadCmd)
+		}
+
+		// 检查是否需要备份
+		if service.Backup {
+			backupNeeded = true
+		}
+	}
+
+	if len(deployTargets) == 0 {
+		logrus.Info("No deploy targets found for this domain")
+		return nil
+	}
+
+	// 验证部署目标
+	if err := deployer.ValidateTargets(deployTargets); err != nil {
+		return fmt.Errorf("validate deploy targets: %w", err)
+	}
+
+	// 部署证书
+	results, err := deployer.Deploy(certData, keyData, deployTargets, backupNeeded)
+	if err != nil {
+		return fmt.Errorf("deploy certificates: %w", err)
+	}
+
+	// 记录部署结果
+	for _, result := range results {
+		if result.Success {
+			logrus.Infof("Deployed to: %s (cert) / %s (key)", result.Target.CertPath, result.Target.KeyPath)
+			if backupNeeded && result.BackupCert != "" {
+				logrus.Infof("Backup created: %s, %s", result.BackupCert, result.BackupKey)
+			}
+		} else {
+			logrus.Errorf("Failed to deploy to %s: %v", result.Target.CertPath, result.Error)
+		}
+	}
+
+	// 执行重载命令
+	for _, cmd := range reloadCmds {
+		logrus.Infof("Executing reload command: %s", cmd)
+		if err := deployer.ExecuteReload(cmd); err != nil {
+			logrus.Errorf("Failed to execute reload command: %v", err)
+		} else {
+			logrus.Info("Reload command executed successfully")
+		}
+	}
+
+	return nil
+}
+
+// shouldObtainOrRenew 检查是否需要获取或续期证书
+func shouldObtainOrRenew(certPath string) (bool, error) {
+	if config.Config.Check.RenewBeforeDays <= 0 {
+		// 未配置续期检查，默认续期
+		return true, nil
+	}
+
+	info, err := cert.CheckCertificate(certPath, config.Config.Check.RenewBeforeDays)
+	if err != nil {
+		// 检查失败，默认续期
+		logrus.Warnf("Failed to check certificate: %v, will obtain/renew certificate", err)
+		return true, nil
+	}
+
+	if info.NeedsRenew {
+		if info.DaysLeft >= 0 {
+			logrus.Infof("Certificate expires in %d days (threshold: %d), renewing...", info.DaysLeft, config.Config.Check.RenewBeforeDays)
+		} else {
+			logrus.Infof("Certificate already expired, renewing...")
+		}
+		return true, nil
+	}
+
+	logrus.Infof("Certificate is still valid for %d days, no renewal needed", info.DaysLeft)
+	return false, nil
 }
 
 // https://github.com/go-acme/lego/issues/2276
