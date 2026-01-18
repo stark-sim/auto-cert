@@ -19,3 +19,55 @@ lego:
 aliyun:
   access_key: foo
   secret_key: bar
+
+# 证书检查配置
+check:
+  # 提前多少天续期证书（设置为 0 或留空则总是续期）
+  renew_before_days: 30
+
+# 服务配置 - 定义证书部署到哪些服务
+services:
+  # Nginx 示例
+  - name: nginx
+    enabled: true
+    # 使用哪个域名的证书（留空则使用第一个域名）
+    domain: www.starksim.com
+    # 部署目标路径
+    targets:
+      - cert_path: /etc/nginx/ssl/www.starksim.com.crt
+        key_path: /etc/nginx/ssl/www.starksim.com.key
+    # 部署后执行的重载命令
+    reload_command: "nginx -s reload"
+    # 是否在部署前备份现有证书
+    backup: true
+
+  # Dify 示例 - 特定文件名要求
+  - name: dify
+    enabled: false  # 设置为 true 启用
+    domain: dify.starksim.com
+    targets:
+      - cert_path: /opt/dify/docker/nginx/ssl/dify.crt
+        key_path: /opt/dify/docker/nginx/ssl/dify.key
+    reload_command: "docker-compose -f /opt/dify/docker-compose.yml restart nginx"
+    backup: true
+
+  # GitLab 示例
+  - name: gitlab
+    enabled: false
+    domain: gitlab.starksim.com
+    targets:
+      - cert_path: /etc/gitlab/ssl/gitlab.starksim.com.crt
+        key_path: /etc/gitlab/ssl/gitlab.starksim.com.key
+    reload_command: "gitlab-ctl hup nginx"
+    backup: true
+
+  # Harbor 示例
+  - name: harbor
+    enabled: false
+    domain: harbor.starksim.com
+    targets:
+      - cert_path: /data/cert/harbor.starksim.com.crt
+        key_path: /data/cert/harbor.starksim.com.key
+    reload_command: "docker-compose -f /opt/harbor/docker-compose.yml restart proxy"
+    backup: true
+
