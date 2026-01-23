@@ -14,6 +14,7 @@ type CertInfo struct {
 	NotAfter   time.Time
 	DaysLeft   int
 	NeedsRenew bool
+	DNSNames   []string // 证书覆盖的域名列表
 }
 
 // CheckCertificate 检查证书是否需要续期
@@ -44,6 +45,7 @@ func CheckCertificate(certPath string, renewBeforeDays int) (*CertInfo, error) {
 		NotAfter:   cert.NotAfter,
 		DaysLeft:   daysLeft,
 		NeedsRenew: needsRenew,
+		DNSNames:   cert.DNSNames,
 	}, nil
 }
 
