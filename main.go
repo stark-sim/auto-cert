@@ -159,7 +159,7 @@ func main() {
 		// 文件存在，走重续证书逻辑 (Renew)
 		// 先检查证书是否需要续期
 		certFilePath := path.Join(config.Config.Lego.CrtSaveDir, fmt.Sprintf("%s.crt", config.Config.Lego.Domains[0]))
-		shouldRenew, err := shouldObtainOrRenew(certFilePath)
+		shouldRenew, domainsChanged, err := shouldObtainOrRenew(certFilePath)
 		if err != nil {
 			logrus.Warnf("Error checking certificate renewal: %v, proceeding with renewal", err)
 		}
@@ -168,28 +168,41 @@ func main() {
 			return
 		}
 
-		savedCertURLFileBytes, err = os.ReadFile(originCrtJsonFilePath)
-		if err != nil {
-			logrus.Fatal(err)
-		}
-		var savedCertURL SavedCertURL
-		if err = json.Unmarshal(savedCertURLFileBytes, &savedCertURL); err != nil {
-			logrus.Fatal(err)
-		}
+		// 如果域名有变化，删除旧的 json 文件，走新证书申请流程
+		if domainsChanged {
+			logrus.Info("Domains changed, removing old certificate metadata and obtaining new certificate...")
+			if err := os.Remove(originCrtJsonFilePath); err != nil {
+				logrus.Warnf("Failed to remove old json file: %v", err)
+			}
+			certificates, err = client.Certificate.Obtain(request)
+			if err != nil {
+				logrus.Fatal(err)
+			}
+		} else {
+			// 域名未变化，走续期流程
+			savedCertURLFileBytes, err = os.ReadFile(originCrtJsonFilePath)
+			if err != nil {
+				logrus.Fatal(err)
+			}
+			var savedCertURL SavedCertURL
+			if err = json.Unmarshal(savedCertURLFileBytes, &savedCertURL); err != nil {
+				logrus.Fatal(err)
+			}
 
-		// 从 acme 那边拿到原来的证书文件，当然不包含私钥 key/pem
-		certificates, err = client.Certificate.Get(savedCertURL.CertURL, true)
-		if err != nil {
-			logrus.Fatal(err)
-		}
+			// 从 acme 那边拿到原来的证书文件，当然不包含私钥 key/pem
+			certificates, err = client.Certificate.Get(savedCertURL.CertURL, true)
+			if err != nil {
+				logrus.Fatal(err)
+			}
 
-		// 注意这里的 certificates 会变成新的
-		certificates, err = client.Certificate.RenewWithOptions(*certificates, &certificate.RenewOptions{
-			// 还不知道这些选项有啥用
-			Bundle: true,
-		})
-		if err != nil {
-			logrus.Fatal(err)
+			// 注意这里的 certificates 会变成新的
+			certificates, err = client.Certificate.RenewWithOptions(*certificates, &certificate.RenewOptions{
+				// 还不知道这些选项有啥用
+				Bundle: true,
+			})
+			if err != nil {
+				logrus.Fatal(err)
+			}
 		}
 	}
 
@@ -321,17 +334,25 @@ func deployCertificates(domain string, certData []byte, keyData []byte) error {
 }
 
 // shouldObtainOrRenew 检查是否需要获取或续期证书
-func shouldObtainOrRenew(certPath string) (bool, error) {
+// 返回值: (是否需要操作, 是否域名有变化, error)
+func shouldObtainOrRenew(certPath string) (bool, bool, error) {
 	if config.Config.Check.RenewBeforeDays <= 0 {
 		// 未配置续期检查，默认续期
-		return true, nil
+		return true, false, nil
 	}
 
 	info, err := cert.CheckCertificate(certPath, config.Config.Check.RenewBeforeDays)
 	if err != nil {
 		// 检查失败，默认续期
 		logrus.Warnf("Failed to check certificate: %v, will obtain/renew certificate", err)
-		return true, nil
+		return true, false, nil
+	}
+
+	// 检查域名是否变化
+	domainsChanged := !equalDomainLists(info.DNSNames, config.Config.Lego.Domains)
+	if domainsChanged {
+		logrus.Warnf("Certificate domains changed: old=%v, new=%v, need to re-obtain certificate", info.DNSNames, config.Config.Lego.Domains)
+		return true, true, nil
 	}
 
 	if info.NeedsRenew {
@@ -340,11 +361,28 @@ func shouldObtainOrRenew(certPath string) (bool, error) {
 		} else {
 			logrus.Infof("Certificate already expired, renewing...")
 		}
-		return true, nil
+		return true, false, nil
 	}
 
 	logrus.Infof("Certificate is still valid for %d days, no renewal needed", info.DaysLeft)
-	return false, nil
+	return false, false, nil
+}
+
+// equalDomainLists 比较两个域名列表是否相等（忽略顺序）
+func equalDomainLists(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	aMap := make(map[string]bool)
+	for _, domain := range a {
+		aMap[domain] = true
+	}
+	for _, domain := range b {
+		if !aMap[domain] {
+			return false
+		}
+	}
+	return true
 }
 
 // https://github.com/go-acme/lego/issues/2276
